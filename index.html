@@ -629,6 +629,14 @@ dialog.dlg::backdrop { background: rgba(var(--ombre-rgb), .84); -webkit-backdrop
 .champ label { font: 600 11px/1.2 var(--f-body); letter-spacing: .12em; text-transform: uppercase; color: var(--brume); }
 .champ input, .champ select { width: 100%; min-width: 0; padding: 8px 10px; background: var(--nuit-2); border: 1px solid var(--ligne); color: var(--projo); font-size: 16px; border-radius: 0; }
 .potes-vide { margin: 0; color: var(--brume); font-size: 14px; }
+.site-liste { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 10px; }
+.site-pote { position: relative; display: grid; gap: 4px; justify-items: center; text-align: center; font-size: 12px; line-height: 1.2; }
+.site-pote img { width: 72px; height: 90px; object-fit: cover; display: block; border: 2px solid var(--ligne); }
+.site-pote span { max-width: 96px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.site-pote button { padding: 4px 8px; font-size: 12px; background: var(--nuit-2); border: 1px solid var(--ligne); color: var(--projo); cursor: pointer; border-radius: 0; }
+.site-pote button:hover, .site-pote button:focus-visible { border-color: var(--led); color: var(--led); }
+.site-pote.retire img { opacity: .3; filter: grayscale(1); }
+.site-pote.retire span { color: var(--brume); text-decoration: line-through; }
 .astuce { font-size: 14px; color: var(--brume); }
 .astuce summary { cursor: pointer; font-weight: 700; color: var(--projo); }
 .astuce p { margin: 8px 0 0; max-width: 68ch; }
@@ -1029,6 +1037,9 @@ dialog.dlg-inspect { width: min(460px, calc(100vw - 24px)); background: radial-g
     </div>
     <ul class="potes-liste" id="potesListe"></ul>
     <p class="potes-vide" id="potesVide">Aucun pote pour l'instant : les 8 exemples jouent à leur place.</p>
+    <div class="potes-tete"><h3>Potes du site (<span id="nbSite">0</span>)</h3></div>
+    <p class="potes-vide">Touche « Retirer » pour enlever une carte du tirage pour tout le monde. « Remettre » la fait revenir.</p>
+    <ul class="site-liste" id="siteListe"></ul>
     <details class="astuce">
       <summary>Les mettre en dur dans la page</summary>
       <p>En haut du script, remplis le tableau <code>PERSOS</code> : un pote par ligne, avec <code>photo: 'photos/karim.jpg'</code> (ou une image data:), <code>cadrage</code> pour centrer le visage et <code>rarete: 'legendaire'</code> si tu veux le forcer à une rareté. Comme ça, tout le monde voit les mêmes potes.</p>
@@ -1270,6 +1281,7 @@ function sauver() { try { localStorage.setItem(CLE, JSON.stringify(SAVE)); } cat
 /* ---------- Potes (config + ajouts) ---------- */
 const TITRES_AUTO = ['Recrue Surprise', 'Le Joker du Groupe', 'Toujours Partant', 'Légende du Quartier', 'Star des Soirées', 'Roi du Débat', 'Pro de la Sieste', 'Cerveau de l\'Équipe'];
 const UPLOADS = [];
+const MASQUES = new Set();
 let CONFIG = [];
 function construireConfig() {
   const vus = new Set();
@@ -1281,7 +1293,7 @@ function construireConfig() {
   });
 }
 function tousLesPersos() {
-  return CONFIG.concat(UPLOADS.map(u => ({
+  return CONFIG.filter(p => !MASQUES.has(p.id)).concat(UPLOADS.map(u => ({
     id: u.id, nom: u.nom || 'Pote', titre: u.titre || TITRES_AUTO[hashStr(u.id) % TITRES_AUTO.length],
     photo: u.photo, cadrage: cadrageSur(u.cadrage), rarete: normRarete(u.rarete), poste: null, source: 'upload',
   })));
@@ -1616,7 +1628,7 @@ function cacherElements() {
     'stadeGarantie', 'woEtoiles', 'histo', 'cptSession', 'cptTotal', 'cptPity', 'cptPityUnite', 'cptPityBloc', 'pityBarre', 'tauxTitre', 'tauxCorps', 'tauxPied',
     'effectif', 'effectifEtat', 'walkout', 'woScene', 'woSym', 'woPoste', 'woOvr', 'woBanniere', 'woCarte', 'woNom', 'btnWalkoutSuite', 'flash', 'annonce',
     'dlgAlbum', 'btnFermerAlbum', 'albumStats', 'progRemplie', 'progTexte', 'albumGrille', 'btnReset', 'resetConfirm', 'btnResetOui', 'btnResetNon',
-    'dlgPotes', 'btnFermerPotes', 'depot', 'inputPhotos', 'depotMsg', 'nbPotes', 'chkExemples', 'potesListe', 'potesVide', 'noteLocale',
+    'dlgPotes', 'btnFermerPotes', 'depot', 'inputPhotos', 'depotMsg', 'nbPotes', 'chkExemples', 'potesListe', 'potesVide', 'noteLocale', 'siteListe', 'nbSite',
     'dlgInspect', 'btnFermerInspect', 'inspectTitre', 'inspectScene', 'inspectInfo'].forEach(id => { E[id] = document.getElementById(id); });
 }
 function lireCouleurs() {
@@ -2374,7 +2386,13 @@ async function chargerPotesPartages() {
   if (!Array.isArray(liste)) return false;
   const enCours = E.dlgPotes.open && document.activeElement && E.potesListe.contains(document.activeElement);
   if (CLOUD.actif && !enCours) UPLOADS.length = 0;
-  liste.sort((a, b) => (a.ajoute || 0) - (b.ajoute || 0)).forEach(u => { if (u && u.id && u.photo && !UPLOADS.some(x => x.id === u.id)) UPLOADS.push(u); });
+  MASQUES.clear();
+  liste.sort((a, b) => (a.ajoute || 0) - (b.ajoute || 0)).forEach(u => {
+    if (!u || !u.id) return;
+    if (String(u.id).indexOf('masque-') === 0) { MASQUES.add(String(u.id).slice(7)); return; }
+    if (u.photo && !UPLOADS.some(x => x.id === u.id)) UPLOADS.push(u);
+  });
+  if (E.dlgPotes.open) rendreListeSite();
   apresChangementPotes();
   if (E.dlgPotes.open && !enCours) rendreListePotes();
   return true;
@@ -2448,6 +2466,30 @@ function rendreListePotes() {
       '<div class="champ"><label for="cad-' + u.id + '">Cadrage</label><select id="cad-' + u.id + '" data-k="cadrage">' + cad + '</select></div>' +
       '</div><button type="button" class="btn-icone pote-suppr" id="suppr-' + u.id + '" aria-label="Retirer ' + esc(u.nom) + '"><svg aria-hidden="true"><use href="#i-x"/></svg></button></li>';
   }).join('');
+}
+function rendreListeSite() {
+  E.nbSite.textContent = String(CONFIG.filter(p => !MASQUES.has(p.id)).length) + ' / ' + CONFIG.length;
+  E.siteListe.innerHTML = CONFIG.map(p => {
+    const r = MASQUES.has(p.id);
+    return '<li class="site-pote' + (r ? ' retire' : '') + '" data-pid="' + esc(p.id) + '">' + (p.photo ? '<img src="' + esc(p.photo) + '" alt="" loading="lazy" style="object-position:' + esc(p.cadrage) + '">' : '') +
+      '<span>' + esc(p.nom) + '</span><button type="button" data-masque="' + (r ? '0' : '1') + '" aria-label="' + (r ? 'Remettre ' : 'Retirer ') + esc(p.nom) + '">' + (r ? 'Remettre' : 'Retirer') + '</button></li>';
+  }).join('');
+}
+async function basculerMasque(li, masquer) {
+  const pid = li.dataset.pid, nom = (persoParId(pid) || CONFIG.find(p => p.id === pid) || {}).nom || 'Ce pote';
+  if (masquer) MASQUES.add(pid); else MASQUES.delete(pid);
+  rendreListeSite();
+  apresChangementPotes();
+  const ok = masquer ? await STOCK.mettre({ id: 'masque-' + pid, nom: '__masque__', titre: '', photo: '', cadrage: '', rarete: null, ajoute: Date.now() }) : await STOCK.suppr('masque-' + pid);
+  if (!ok) {
+    if (masquer) MASQUES.delete(pid); else MASQUES.add(pid);
+    rendreListeSite(); apresChangementPotes();
+    E.depotMsg.textContent = 'Pas réussi à enregistrer, vérifie ta connexion.';
+    return;
+  }
+  E.depotMsg.textContent = masquer ? nom + ' est retiré du tirage pour tout le monde.' : nom + ' revient dans le tirage.';
+  const b = E.siteListe.querySelector('[data-pid="' + pid + '"] button');
+  try { if (b) b.focus(); } catch (e) { /* rien */ }
 }
 let minuteurPotes = 0;
 function apresChangementPotes() {
@@ -2541,8 +2583,8 @@ function brancher() {
     if (Son.on) Son.confirme();
   });
   E.btnAlbum.addEventListener('click', ouvrirAlbum);
-  E.btnPotes.addEventListener('click', () => { rendreListePotes(); ouvrirDlg(E.dlgPotes); if (CLOUD.actif) chargerPotesPartages(); });
-  E.btnPotes2.addEventListener('click', () => { rendreListePotes(); ouvrirDlg(E.dlgPotes); if (CLOUD.actif) chargerPotesPartages(); });
+  E.btnPotes.addEventListener('click', () => { rendreListePotes(); rendreListeSite(); ouvrirDlg(E.dlgPotes); if (CLOUD.actif) chargerPotesPartages(); });
+  E.btnPotes2.addEventListener('click', () => { rendreListePotes(); rendreListeSite(); ouvrirDlg(E.dlgPotes); if (CLOUD.actif) chargerPotesPartages(); });
   E.btnFermerAlbum.addEventListener('click', () => fermerDlg(E.dlgAlbum));
   E.btnFermerPotes.addEventListener('click', () => fermerDlg(E.dlgPotes));
   E.btnFermerInspect.addEventListener('click', () => fermerDlg(E.dlgInspect));
@@ -2581,9 +2623,10 @@ function brancher() {
     if (!e.dataTransfer || !e.dataTransfer.files || !e.dataTransfer.files.length) return;
     e.preventDefault();
     if (!E.walkout.hidden) return;
-    if (!E.dlgPotes.open && !document.querySelector('dialog[open]')) { rendreListePotes(); ouvrirDlg(E.dlgPotes); }
+    if (!E.dlgPotes.open && !document.querySelector('dialog[open]')) { rendreListePotes(); rendreListeSite(); ouvrirDlg(E.dlgPotes); }
     if (E.dlgPotes.open) ajouterFichiers(e.dataTransfer.files);
   });
+  E.siteListe.addEventListener('click', e => { const b = e.target.closest('button[data-masque]'); if (b) basculerMasque(b.closest('.site-pote'), b.dataset.masque === '1'); });
   E.potesListe.addEventListener('input', surSaisiePote);
   E.potesListe.addEventListener('change', surSaisiePote);
   E.potesListe.addEventListener('click', e => { const b = e.target.closest('.pote-suppr'); if (b) supprimerPote(b.closest('.pote')); });
