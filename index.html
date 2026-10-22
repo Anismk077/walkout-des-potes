@@ -629,6 +629,13 @@ dialog.dlg::backdrop { background: rgba(var(--ombre-rgb), .84); -webkit-backdrop
 .champ label { font: 600 11px/1.2 var(--f-body); letter-spacing: .12em; text-transform: uppercase; color: var(--brume); }
 .champ input, .champ select { width: 100%; min-width: 0; padding: 8px 10px; background: var(--nuit-2); border: 1px solid var(--ligne); color: var(--projo); font-size: 16px; border-radius: 0; }
 .potes-vide { margin: 0; color: var(--brume); font-size: 14px; }
+.dlg-compte { width: min(520px, calc(100vw - 24px)); }
+.compte-txt { margin: 0; line-height: 1.45; }
+.compte-form { display: grid; gap: 14px; margin: 14px 0 10px; }
+.compte-form .btn-cta { justify-self: start; }
+.compte-note, .compte-etat { margin: 0; font-size: 13px; color: var(--brume); }
+#compteCo { display: grid; gap: 12px; justify-items: start; }
+#compteCo[hidden], #compteDeco[hidden] { display: none; }
 .site-bloc > summary { list-style: none; display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 12px; cursor: pointer; padding: 12px 0; border-top: 1px solid var(--ligne); border-bottom: 1px solid var(--ligne); }
 .site-bloc > summary::-webkit-details-marker { display: none; }
 .site-bloc > summary h3 { margin: 0; font: 800 18px/1 var(--f-display); letter-spacing: .12em; text-transform: uppercase; }
@@ -845,6 +852,7 @@ dialog.dlg-inspect { width: min(460px, calc(100vw - 24px)); background: radial-g
   <symbol id="i-son" viewBox="0 0 24 24"><path d="M3.5 9h4l5-4v14l-5-4h-4z" fill="currentColor"/><path d="M16 8.5a5 5 0 0 1 0 7M18.6 5.8a8.6 8.6 0 0 1 0 12.4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
   <symbol id="i-son-off" viewBox="0 0 24 24"><path d="M3.5 9h4l5-4v14l-5-4h-4z" fill="currentColor"/><path d="M16.5 9.5l5 5M21.5 9.5l-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
   <symbol id="i-album" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7.5" height="8" rx="1"/><rect x="13.5" y="3" width="7.5" height="8" rx="1"/><rect x="3" y="13" width="7.5" height="8" rx="1"/><rect x="13.5" y="13" width="7.5" height="8" rx="1"/></g></symbol>
+  <symbol id="i-compte" viewBox="0 0 24 24"><g fill="currentColor"><circle cx="12" cy="8" r="4.2"/><path d="M3.5 21c.7-4.6 4-7.3 8.5-7.3s7.8 2.7 8.5 7.3z"/></g></symbol>
   <symbol id="i-potes" viewBox="0 0 24 24"><g fill="currentColor"><circle cx="8.5" cy="8" r="3.5"/><path d="M1.5 20c.6-4 3.4-6.3 7-6.3s6.4 2.3 7 6.3z"/><circle cx="16.8" cy="7.2" r="2.8"/><path d="M16.8 12.2c3.1 0 5.3 2 5.7 5.6h-5.1c-.4-2.2-1.3-4-2.8-5.3.7-.2 1.4-.3 2.2-.3z"/></g></symbol>
   <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></symbol>
   <symbol id="i-up" viewBox="0 0 24 24"><path d="M12 15V4M7.5 8.5L12 4l4.5 4.5M4 15v4.5h16V15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
@@ -866,6 +874,7 @@ dialog.dlg-inspect { width: min(460px, calc(100vw - 24px)); background: radial-g
     </dl>
     <nav class="actions-haut" aria-label="Menu">
       <button id="btnSon" class="btn-tab" type="button" aria-pressed="false" aria-label="Son"><svg class="ico" aria-hidden="true"><use id="icoSon" href="#i-son-off"/></svg><span>Son</span></button>
+      <button id="btnCompte" class="btn-tab" type="button" aria-label="Compte"><svg class="ico" aria-hidden="true"><use href="#i-compte"/></svg><span id="compteLabel">Compte</span></button>
       <button id="btnAlbum" class="btn-tab" type="button" aria-label="Album"><svg class="ico" aria-hidden="true"><use href="#i-album"/></svg><span>Album</span></button>
       <button id="btnPotes" class="btn-tab btn-tab-hot" type="button"><svg class="ico" aria-hidden="true"><use href="#i-potes"/></svg><span>Mes potes</span></button>
     </nav>
@@ -1074,6 +1083,29 @@ dialog.dlg-inspect { width: min(460px, calc(100vw - 24px)); background: radial-g
       <p>En haut du script, remplis le tableau <code>PERSOS</code> : un pote par ligne, avec <code>photo: 'photos/karim.jpg'</code> (ou une image data:), <code>cadrage</code> pour centrer le visage et <code>rarete: 'legendaire'</code> si tu veux le forcer à une rareté. Comme ça, tout le monde voit les mêmes potes.</p>
     </details>
     <div class="dlg-pied"><button id="btnTerminePotes" class="btn-cta" type="button">Terminé</button></div>
+  </div>
+</dialog>
+
+<dialog id="dlgCompte" class="dlg dlg-compte" aria-labelledby="compteTitre">
+  <div class="dlg-in">
+    <div class="dlg-tete">
+      <h2 id="compteTitre">Mon compte</h2>
+      <button id="btnFermerCompte" class="btn-icone" type="button" aria-label="Fermer"><svg aria-hidden="true"><use href="#i-x"/></svg></button>
+    </div>
+    <div id="compteDeco">
+      <p class="compte-txt">Choisis un pseudo pour sauvegarder tes cartes. Reconnecte-toi avec le même pseudo sur n'importe quel téléphone ou ordi pour retrouver ton album.</p>
+      <form id="formCompte" class="compte-form" autocomplete="off">
+        <div class="champ"><label for="inputPseudo">Ton pseudo</label><input id="inputPseudo" type="text" maxlength="20" autocapitalize="none" spellcheck="false" placeholder="ex : anis077" required></div>
+        <button id="btnConnexion" class="btn-cta" type="submit">Se connecter</button>
+      </form>
+      <p class="compte-note">Pas de mot de passe : quelqu'un qui tape ton pseudo arrive sur ton album. Choisis un pseudo que les autres ne devineront pas.</p>
+    </div>
+    <div id="compteCo" hidden>
+      <p class="compte-txt">Connecté en tant que <b id="comptePseudo"></b>. Tes cartes sont sauvegardées automatiquement.</p>
+      <p class="compte-etat" id="compteEtat"></p>
+      <button id="btnDeconnexion" class="btn-sec" type="button">Se déconnecter</button>
+    </div>
+    <p class="depot-msg" id="compteMsg" role="status"></p>
   </div>
 </dialog>
 
@@ -1298,6 +1330,9 @@ function charger() {
     const o = JSON.parse(raw);
     if (o && typeof o === 'object') SAVE = Object.assign(SAVE_DEF(), o);
   } catch (e) { SAVE = SAVE_DEF(); }
+  normaliserSave();
+}
+function normaliserSave() {
   if (!SAVE.album || typeof SAVE.album !== 'object') SAVE.album = {};
   if (!BOOSTERS[SAVE.booster]) SAVE.booster = 'classique';
   if (SAVE.best && RANG[SAVE.best.rarete] === undefined) SAVE.best = null;
@@ -1306,7 +1341,7 @@ function charger() {
   SAVE.histo = Array.isArray(SAVE.histo) ? SAVE.histo.filter(h => h && RANG[h.rarete] !== undefined).slice(0, 8) : [];
   SAVE.mythVue = !!SAVE.mythVue || SAVE.myth > 0;
 }
-function sauver() { try { localStorage.setItem(CLE, JSON.stringify(SAVE)); } catch (e) { /* stockage indisponible : on continue en mémoire */ } }
+function sauver() { try { localStorage.setItem(CLE, JSON.stringify(SAVE)); } catch (e) { /* stockage indisponible : on continue en mémoire */ } if (typeof COMPTE !== 'undefined') COMPTE.planifier(); }
 
 /* ---------- Potes (config + ajouts) ---------- */
 const TITRES_AUTO = ['Recrue Surprise', 'Le Joker du Groupe', 'Toujours Partant', 'Légende du Quartier', 'Star des Soirées', 'Roi du Débat', 'Pro de la Sieste', 'Cerveau de l\'Équipe'];
@@ -1658,7 +1693,7 @@ function cacherElements() {
     'stadeGarantie', 'woEtoiles', 'histo', 'cptSession', 'cptTotal', 'cptPity', 'cptPityUnite', 'cptPityBloc', 'pityBarre', 'tauxTitre', 'tauxCorps', 'tauxPied',
     'effectif', 'effectifEtat', 'walkout', 'woScene', 'woSym', 'woPoste', 'woOvr', 'woBanniere', 'woCarte', 'woNom', 'btnWalkoutSuite', 'flash', 'annonce',
     'dlgAlbum', 'btnFermerAlbum', 'albumStats', 'progRemplie', 'progTexte', 'albumGrille', 'btnReset', 'resetConfirm', 'btnResetOui', 'btnResetNon',
-    'dlgPotes', 'btnFermerPotes', 'depot', 'inputPhotos', 'depotMsg', 'nbPotes', 'chkExemples', 'potesListe', 'potesVide', 'noteLocale', 'siteListe', 'nbSite', 'btnTerminePotes',
+    'dlgPotes', 'btnFermerPotes', 'depot', 'inputPhotos', 'depotMsg', 'nbPotes', 'chkExemples', 'potesListe', 'potesVide', 'noteLocale', 'siteListe', 'nbSite', 'btnTerminePotes', 'btnCompte', 'compteLabel', 'dlgCompte', 'btnFermerCompte', 'compteDeco', 'compteCo', 'formCompte', 'inputPseudo', 'btnConnexion', 'btnDeconnexion', 'comptePseudo', 'compteEtat', 'compteMsg',
     'dlgInspect', 'btnFermerInspect', 'inspectTitre', 'inspectScene', 'inspectInfo'].forEach(id => { E[id] = document.getElementById(id); });
 }
 function lireCouleurs() {
@@ -2423,6 +2458,95 @@ const CLOUD = {
   async suppr(id) { try { await this.req('potes?id=eq.' + encodeURIComponent(id), { method: 'DELETE' }); return true; } catch (e) { return null; } },
 };
 const STOCK = CLOUD.actif ? CLOUD : IDB;
+/* ---------- Comptes (pseudo seul, album sauvegardé dans Supabase) ---------- */
+const CLE_PSEUDO = 'walkout-pseudo';
+const COMPTE = {
+  pseudo: null, minuteur: 0, enCours: false, encore: false,
+  norm(s) { return String(s || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9_.-]/g, '').slice(0, 20); },
+  async lire(id) { const r = await CLOUD.req('comptes?select=data&id=eq.' + encodeURIComponent(id)); return Array.isArray(r) && r.length ? r[0].data : null; },
+  async ecrire(id, data) { await CLOUD.req('comptes', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify({ id, data, maj: Date.now() }) }); },
+  planifier() {
+    if (!this.pseudo || !CLOUD.actif) return;
+    clearTimeout(this.minuteur);
+    this.minuteur = setTimeout(() => this.envoyer(), 1500);
+  },
+  async envoyer() {
+    if (!this.pseudo) return;
+    if (this.enCours) { this.encore = true; return; }
+    this.enCours = true;
+    try { await this.ecrire(this.pseudo, SAVE); majEtatCompte('Sauvegardé à ' + new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) + '.'); }
+    catch (e) { majEtatCompte('Pas de connexion : la sauvegarde sera retentée.'); this.minuteur = setTimeout(() => this.envoyer(), 15000); }
+    this.enCours = false;
+    if (this.encore) { this.encore = false; this.envoyer(); }
+  },
+};
+function majEtatCompte(t) { if (E.compteEtat) E.compteEtat.textContent = t || ''; }
+function rendreCompte() {
+  const co = !!COMPTE.pseudo;
+  E.compteLabel.textContent = co ? COMPTE.pseudo : 'Compte';
+  E.btnCompte.setAttribute('aria-label', co ? 'Compte : ' + COMPTE.pseudo : 'Se connecter');
+  E.btnCompte.setAttribute('aria-pressed', co ? 'true' : 'false');
+  E.compteDeco.hidden = co; E.compteCo.hidden = !co;
+  E.comptePseudo.textContent = COMPTE.pseudo || '';
+}
+function appliquerSave(o) {
+  const garder = { booster: SAVE.booster, rapide: SAVE.rapide, exemples: SAVE.exemples };
+  SAVE = Object.assign(SAVE_DEF(), garder, o && typeof o === 'object' ? o : {});
+  normaliserSave();
+  try { localStorage.setItem(CLE, JSON.stringify(SAVE)); } catch (e) { /* rien */ }
+  S.booster = SAVE.booster; S.rapide = !!SAVE.rapide;
+  E.btnRapide.setAttribute('aria-pressed', S.rapide ? 'true' : 'false');
+  majCompteurs(); majChoixBoosters(); rendreTaux(); rendreHisto(); rendreEffectif(); majActions();
+  if (S.phase === 'idle') { S.pack = null; majPackArt(); }
+  if (E.dlgAlbum.open) rendreAlbum();
+}
+function saveVide(s) { return !s || (!s.total && !Object.keys(s.album || {}).length); }
+async function connecter(brut) {
+  const id = COMPTE.norm(brut);
+  if (id.length < 3) { E.compteMsg.textContent = 'Pseudo trop court : au moins 3 lettres ou chiffres.'; return; }
+  if (!CLOUD.actif) { E.compteMsg.textContent = 'Les comptes ne sont pas disponibles sur cette version du site.'; return; }
+  E.btnConnexion.disabled = true; E.compteMsg.textContent = 'Connexion…';
+  try {
+    const distant = await COMPTE.lire(id);
+    if (distant && !saveVide(distant)) {
+      appliquerSave(distant);
+      E.compteMsg.textContent = 'Content de te revoir ' + id + ' ! Ton album est chargé.';
+    } else {
+      await COMPTE.ecrire(id, SAVE);
+      E.compteMsg.textContent = 'Compte ' + id + ' créé. Tes cartes actuelles y sont sauvegardées.';
+    }
+    COMPTE.pseudo = id;
+    try { localStorage.setItem(CLE_PSEUDO, id); } catch (e) { /* rien */ }
+    majEtatCompte('');
+    rendreCompte();
+    annoncer('Connecté en tant que ' + id + '.');
+  } catch (e) {
+    E.compteMsg.textContent = 'Connexion impossible, vérifie ta connexion internet et réessaie.';
+  }
+  E.btnConnexion.disabled = false;
+}
+async function deconnecter() {
+  clearTimeout(COMPTE.minuteur);
+  if (COMPTE.pseudo) { try { await COMPTE.ecrire(COMPTE.pseudo, SAVE); } catch (e) { /* rien */ } }
+  const ancien = COMPTE.pseudo;
+  COMPTE.pseudo = null;
+  try { localStorage.removeItem(CLE_PSEUDO); } catch (e) { /* rien */ }
+  appliquerSave(SAVE_DEF());
+  rendreCompte();
+  E.compteMsg.textContent = ancien ? 'Déconnecté. L\'album de ' + ancien + ' reste sauvegardé.' : '';
+  try { E.inputPseudo.focus(); } catch (e) { /* rien */ }
+}
+async function reprendreCompte() {
+  let id = null;
+  try { id = localStorage.getItem(CLE_PSEUDO); } catch (e) { /* rien */ }
+  if (!id || !CLOUD.actif) { rendreCompte(); return; }
+  COMPTE.pseudo = id; rendreCompte();
+  try {
+    const distant = await COMPTE.lire(id);
+    if (distant && !saveVide(distant) && (Number(distant.total) || 0) >= (Number(SAVE.total) || 0)) appliquerSave(distant);
+    else COMPTE.planifier();
+  } catch (e) { /* hors ligne : on garde l'album local */ }
+}
 async function chargerPotesPartages() {
   const liste = await STOCK.tous();
   if (!Array.isArray(liste)) return false;
@@ -2625,6 +2749,12 @@ function brancher() {
     if (Son.on) Son.confirme();
   });
   E.btnAlbum.addEventListener('click', ouvrirAlbum);
+  E.btnCompte.addEventListener('click', () => { E.compteMsg.textContent = ''; rendreCompte(); ouvrirDlg(E.dlgCompte); if (!COMPTE.pseudo) { try { E.inputPseudo.focus(); } catch (e) { /* rien */ } } });
+  E.btnFermerCompte.addEventListener('click', () => fermerDlg(E.dlgCompte));
+  E.dlgCompte.addEventListener('click', e => { if (e.target === E.dlgCompte) fermerDlg(E.dlgCompte); });
+  E.formCompte.addEventListener('submit', e => { e.preventDefault(); connecter(E.inputPseudo.value); });
+  E.btnDeconnexion.addEventListener('click', deconnecter);
+  window.addEventListener('pagehide', () => { if (COMPTE.pseudo && CLOUD.actif) { try { fetch(SUPABASE_URL.replace(/\/+$/, '') + '/rest/v1/comptes', { method: 'POST', keepalive: true, headers: { apikey: SUPABASE_CLE, Authorization: 'Bearer ' + SUPABASE_CLE, 'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify({ id: COMPTE.pseudo, data: SAVE, maj: Date.now() }) }); } catch (e) { /* rien */ } } });
   E.btnPotes.addEventListener('click', () => { rendreListePotes(); rendreListeSite(); ouvrirDlg(E.dlgPotes); if (CLOUD.actif) chargerPotesPartages(); });
   E.btnPotes2.addEventListener('click', () => { rendreListePotes(); rendreListeSite(); ouvrirDlg(E.dlgPotes); if (CLOUD.actif) chargerPotesPartages(); });
   E.btnFermerAlbum.addEventListener('click', () => fermerDlg(E.dlgAlbum));
@@ -2752,6 +2882,7 @@ function start(data) {
     const h = window.claude && window.claude.hot;
     if (h && typeof h.snapshot === 'function') h.snapshot(() => ({ booster: S.booster, rapide: S.rapide, session: S.session }));
   } catch (e) { /* rien */ }
+  reprendreCompte();
   if (CLOUD.actif) {
     E.noteLocale.textContent = 'Les potes ajoutés ici sont visibles par tout le monde sur le site.';
     chargerPotesPartages();
