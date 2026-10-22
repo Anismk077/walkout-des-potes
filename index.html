@@ -629,6 +629,17 @@ dialog.dlg::backdrop { background: rgba(var(--ombre-rgb), .84); -webkit-backdrop
 .champ label { font: 600 11px/1.2 var(--f-body); letter-spacing: .12em; text-transform: uppercase; color: var(--brume); }
 .champ input, .champ select { width: 100%; min-width: 0; padding: 8px 10px; background: var(--nuit-2); border: 1px solid var(--ligne); color: var(--projo); font-size: 16px; border-radius: 0; }
 .potes-vide { margin: 0; color: var(--brume); font-size: 14px; }
+.site-bloc > summary { list-style: none; display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 12px; cursor: pointer; padding: 12px 0; border-top: 1px solid var(--ligne); border-bottom: 1px solid var(--ligne); }
+.site-bloc > summary::-webkit-details-marker { display: none; }
+.site-bloc > summary h3 { margin: 0; font: 800 18px/1 var(--f-display); letter-spacing: .12em; text-transform: uppercase; }
+.site-bloc > summary h3::before { content: '▸ '; color: var(--led); }
+.site-bloc[open] > summary h3::before { content: '▾ '; }
+.site-aide { font-size: 13px; color: var(--brume); }
+.site-bloc[open] > summary { margin-bottom: 10px; }
+.site-bloc .potes-vide { margin-bottom: 10px; }
+#dlgPotes .dlg-tete { position: sticky; top: 0; z-index: 3; margin: -18px -20px 0; padding: 14px 20px; background: var(--gradin); border-bottom: 1px solid var(--ligne); }
+.dlg-pied { position: sticky; bottom: 0; z-index: 3; margin: 0 -20px -22px; padding: 12px 20px calc(12px + env(safe-area-inset-bottom, 0px)); background: var(--gradin); border-top: 1px solid var(--ligne); display: flex; justify-content: flex-end; }
+.dlg-pied .btn-cta { min-width: 160px; }
 .site-liste { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 10px; }
 .site-pote { position: relative; display: grid; gap: 4px; justify-items: center; text-align: center; font-size: 12px; line-height: 1.2; }
 .site-pote img { width: 72px; height: 90px; object-fit: cover; display: block; border: 2px solid var(--ligne); }
@@ -798,6 +809,22 @@ dialog.dlg-inspect { width: min(460px, calc(100vw - 24px)); background: radial-g
   .tuile.best { grid-column: 1 / -1; }
   .pote { grid-template-columns: 64px 1fr auto; }
   .pote-photo { width: 64px; height: 82px; }
+  dialog#dlgPotes { width: 100vw; max-width: 100vw; height: 100dvh; max-height: 100dvh; margin: 0; border: 0; }
+  #dlgPotes .dlg-in { padding: 0 14px 0; gap: 14px; min-height: 100%; display: flex; flex-direction: column; }
+  #dlgPotes .dlg-pied { margin-top: auto; }
+  #dlgPotes .dlg-tete { margin: 0 -14px; padding: calc(10px + env(safe-area-inset-top, 0px)) 14px 10px; }
+  #dlgPotes .dlg-tete h2 { font-size: 22px; }
+  #dlgPotes .btn-icone { width: 44px; height: 44px; }
+  #dlgPotes .depot { padding: 16px 12px; }
+  #dlgPotes .depot-titre { font-size: 18px; }
+  #dlgPotes .depot svg { width: 26px; height: 26px; }
+  .pote-champs { grid-template-columns: 1fr 1fr; gap: 6px 8px; }
+  .champ input, .champ select { padding: 7px 8px; }
+  .site-liste { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+  .site-pote img { width: 100%; height: auto; aspect-ratio: 4 / 5; }
+  .site-pote span { max-width: 100%; }
+  .dlg-pied { margin: 0 -14px; padding: 10px 14px calc(10px + env(safe-area-inset-bottom, 0px)); }
+  .dlg-pied .btn-cta { width: 100%; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1037,13 +1064,16 @@ dialog.dlg-inspect { width: min(460px, calc(100vw - 24px)); background: radial-g
     </div>
     <ul class="potes-liste" id="potesListe"></ul>
     <p class="potes-vide" id="potesVide">Aucun pote pour l'instant : les 8 exemples jouent à leur place.</p>
-    <div class="potes-tete"><h3>Potes du site (<span id="nbSite">0</span>)</h3></div>
-    <p class="potes-vide">Touche « Retirer » pour enlever une carte du tirage pour tout le monde. « Remettre » la fait revenir.</p>
-    <ul class="site-liste" id="siteListe"></ul>
+    <details class="site-bloc">
+      <summary><h3>Potes du site (<span id="nbSite">0</span>)</h3><span class="site-aide">Retirer ou remettre des cartes</span></summary>
+      <p class="potes-vide">« Retirer » enlève une carte du tirage pour tout le monde. « Remettre » la fait revenir.</p>
+      <ul class="site-liste" id="siteListe"></ul>
+    </details>
     <details class="astuce">
       <summary>Les mettre en dur dans la page</summary>
       <p>En haut du script, remplis le tableau <code>PERSOS</code> : un pote par ligne, avec <code>photo: 'photos/karim.jpg'</code> (ou une image data:), <code>cadrage</code> pour centrer le visage et <code>rarete: 'legendaire'</code> si tu veux le forcer à une rareté. Comme ça, tout le monde voit les mêmes potes.</p>
     </details>
+    <div class="dlg-pied"><button id="btnTerminePotes" class="btn-cta" type="button">Terminé</button></div>
   </div>
 </dialog>
 
@@ -1628,7 +1658,7 @@ function cacherElements() {
     'stadeGarantie', 'woEtoiles', 'histo', 'cptSession', 'cptTotal', 'cptPity', 'cptPityUnite', 'cptPityBloc', 'pityBarre', 'tauxTitre', 'tauxCorps', 'tauxPied',
     'effectif', 'effectifEtat', 'walkout', 'woScene', 'woSym', 'woPoste', 'woOvr', 'woBanniere', 'woCarte', 'woNom', 'btnWalkoutSuite', 'flash', 'annonce',
     'dlgAlbum', 'btnFermerAlbum', 'albumStats', 'progRemplie', 'progTexte', 'albumGrille', 'btnReset', 'resetConfirm', 'btnResetOui', 'btnResetNon',
-    'dlgPotes', 'btnFermerPotes', 'depot', 'inputPhotos', 'depotMsg', 'nbPotes', 'chkExemples', 'potesListe', 'potesVide', 'noteLocale', 'siteListe', 'nbSite',
+    'dlgPotes', 'btnFermerPotes', 'depot', 'inputPhotos', 'depotMsg', 'nbPotes', 'chkExemples', 'potesListe', 'potesVide', 'noteLocale', 'siteListe', 'nbSite', 'btnTerminePotes',
     'dlgInspect', 'btnFermerInspect', 'inspectTitre', 'inspectScene', 'inspectInfo'].forEach(id => { E[id] = document.getElementById(id); });
 }
 function lireCouleurs() {
@@ -2252,7 +2282,19 @@ function rendreEffectif() {
 }
 
 /* ---------- Fenêtres ---------- */
-function ouvrirDlg(d) { try { if (!d.open) d.showModal(); } catch (e) { d.setAttribute('open', ''); } }
+function ouvrirDlg(d) {
+  const deja = d.open;
+  try { if (!d.open) d.showModal(); } catch (e) { d.setAttribute('open', ''); }
+  if (!deja && d.id) { try { history.pushState({ dlg: d.id }, ''); } catch (e) { /* rien */ } }
+}
+// Bouton retour du téléphone : ferme la fenêtre ouverte au lieu de quitter le site.
+window.addEventListener('popstate', () => { document.querySelectorAll('dialog[open]').forEach(d => { d.dataset.parRetour = '1'; fermerDlg(d); }); });
+document.addEventListener('close', e => {
+  const d = e.target;
+  if (!d || d.tagName !== 'DIALOG') return;
+  if (d.dataset.parRetour) { delete d.dataset.parRetour; return; }
+  try { if (history.state && history.state.dlg === d.id) history.back(); } catch (er) { /* rien */ }
+}, true);
 function fermerDlg(d) { try { d.close(); } catch (e) { d.removeAttribute('open'); } }
 function inspecter(c, n) {
   const r = RARETES[RANG[c.rarete]];
@@ -2587,6 +2629,7 @@ function brancher() {
   E.btnPotes2.addEventListener('click', () => { rendreListePotes(); rendreListeSite(); ouvrirDlg(E.dlgPotes); if (CLOUD.actif) chargerPotesPartages(); });
   E.btnFermerAlbum.addEventListener('click', () => fermerDlg(E.dlgAlbum));
   E.btnFermerPotes.addEventListener('click', () => fermerDlg(E.dlgPotes));
+  E.btnTerminePotes.addEventListener('click', () => fermerDlg(E.dlgPotes));
   E.btnFermerInspect.addEventListener('click', () => fermerDlg(E.dlgInspect));
   [E.dlgAlbum, E.dlgPotes, E.dlgInspect].forEach(d => d.addEventListener('click', e => { if (e.target === d) fermerDlg(d); }));
   // En fermant la carte en grand, le focus revient là où la boucle continue (jamais sur la carte : pas de boucle infinie).
