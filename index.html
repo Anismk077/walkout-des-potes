@@ -1021,7 +1021,7 @@ dialog.dlg-inspect { width: min(460px, calc(100vw - 24px)); background: radial-g
       <span class="depot-sous">ou touche pour choisir. Une photo par pote, visage bien visible.</span>
       <input id="inputPhotos" class="sr-only" type="file" accept="image/*" multiple>
     </label>
-    <p class="note-locale"><svg aria-hidden="true"><use href="#i-cadenas"/></svg><span>Les photos restent dans ce navigateur, rien n'est envoyé nulle part. Elles sont réduites à 640 px.</span></p>
+    <p class="note-locale"><svg aria-hidden="true"><use href="#i-cadenas"/></svg><span id="noteLocale">Les photos restent dans ce navigateur, rien n'est envoyé nulle part. Elles sont réduites à 640 px.</span></p>
     <p class="depot-msg" id="depotMsg" role="status"></p>
     <div class="potes-tete">
       <h3>Tes potes (<span id="nbPotes">0</span>)</h3>
@@ -1616,7 +1616,7 @@ function cacherElements() {
     'stadeGarantie', 'woEtoiles', 'histo', 'cptSession', 'cptTotal', 'cptPity', 'cptPityUnite', 'cptPityBloc', 'pityBarre', 'tauxTitre', 'tauxCorps', 'tauxPied',
     'effectif', 'effectifEtat', 'walkout', 'woScene', 'woSym', 'woPoste', 'woOvr', 'woBanniere', 'woCarte', 'woNom', 'btnWalkoutSuite', 'flash', 'annonce',
     'dlgAlbum', 'btnFermerAlbum', 'albumStats', 'progRemplie', 'progTexte', 'albumGrille', 'btnReset', 'resetConfirm', 'btnResetOui', 'btnResetNon',
-    'dlgPotes', 'btnFermerPotes', 'depot', 'inputPhotos', 'depotMsg', 'nbPotes', 'chkExemples', 'potesListe', 'potesVide',
+    'dlgPotes', 'btnFermerPotes', 'depot', 'inputPhotos', 'depotMsg', 'nbPotes', 'chkExemples', 'potesListe', 'potesVide', 'noteLocale',
     'dlgInspect', 'btnFermerInspect', 'inspectTitre', 'inspectScene', 'inspectInfo'].forEach(id => { E[id] = document.getElementById(id); });
 }
 function lireCouleurs() {
@@ -2344,6 +2344,41 @@ const IDB = {
   mettre(o) { return this.tx('readwrite', st => st.put(o)); },
   suppr(id) { return this.tx('readwrite', st => st.delete(id)); },
 };
+/* ---------- Potes partagés (Supabase) ----------
+  Remplis ces deux valeurs (Supabase → Project Settings → API) pour que les potes ajoutés
+  soient visibles par tout le monde. Vides = les photos restent dans le navigateur (comme avant). */
+const SUPABASE_URL = '';
+const SUPABASE_CLE = '';
+const CLOUD = {
+  actif: !!(SUPABASE_URL && SUPABASE_CLE),
+  async req(chemin, opts) {
+    const r = await fetch(SUPABASE_URL.replace(/\/+$/, '') + '/rest/v1/' + chemin, Object.assign({}, opts, {
+      headers: Object.assign({ apikey: SUPABASE_CLE, Authorization: 'Bearer ' + SUPABASE_CLE, 'Content-Type': 'application/json' }, (opts && opts.headers) || {}),
+    }));
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.status === 204 ? null : r.json().catch(() => null);
+  },
+  async tous() { try { return await this.req('potes?select=*&order=ajoute.asc'); } catch (e) { return null; } },
+  async mettre(o) {
+    try {
+      await this.req('potes', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+        body: JSON.stringify({ id: o.id, nom: o.nom, titre: o.titre || '', photo: o.photo, cadrage: o.cadrage, rarete: o.rarete || null, ajoute: o.ajoute || Date.now() }) });
+      return true;
+    } catch (e) { return null; }
+  },
+  async suppr(id) { try { await this.req('potes?id=eq.' + encodeURIComponent(id), { method: 'DELETE' }); return true; } catch (e) { return null; } },
+};
+const STOCK = CLOUD.actif ? CLOUD : IDB;
+async function chargerPotesPartages() {
+  const liste = await STOCK.tous();
+  if (!Array.isArray(liste)) return false;
+  const enCours = E.dlgPotes.open && document.activeElement && E.potesListe.contains(document.activeElement);
+  if (CLOUD.actif && !enCours) UPLOADS.length = 0;
+  liste.sort((a, b) => (a.ajoute || 0) - (b.ajoute || 0)).forEach(u => { if (u && u.id && u.photo && !UPLOADS.some(x => x.id === u.id)) UPLOADS.push(u); });
+  apresChangementPotes();
+  if (E.dlgPotes.open && !enCours) rendreListePotes();
+  return true;
+}
 function reduireImage(file, max, q) {
   return new Promise((res, rej) => {
     let url = '';
@@ -2382,16 +2417,17 @@ async function ajouterFichiers(files) {
   const rates = [];
   for (const f of arr) {
     try {
-      const photo = await reduireImage(f, 640, 0.85);
+      const photo = await reduireImage(f, CLOUD.actif ? 520 : 640, CLOUD.actif ? 0.8 : 0.85);
       const u = { id: 'u' + Date.now().toString(36) + Math.floor(rngUI() * 1e6).toString(36), nom: nomDepuisFichier(f.name, UPLOADS.length + 1), titre: '', photo, cadrage: '50% 30%', rarete: null, ajoute: Date.now() };
+      if (CLOUD.actif && !(await CLOUD.mettre(u))) throw new Error('envoi');
       UPLOADS.push(u);
-      await IDB.mettre(u);
+      if (!CLOUD.actif) await IDB.mettre(u);
       ok++;
     } catch (e) { rates.push(f.name || 'photo'); }
   }
-  let msg = ok ? ok + (ok > 1 ? ' potes ajoutés. Change leurs prénoms ci-dessous.' : ' pote ajouté. Change son prénom ci-dessous.') : '';
-  if (rates.length) msg += (msg ? ' ' : '') + 'Illisible : ' + rates.join(', ') + '. Essaie en JPG ou PNG.';
-  if (ok && !IDB.db) msg += ' Ce navigateur ne garde pas les photos : elles disparaîtront en fermant la page.';
+  let msg = ok ? ok + (ok > 1 ? ' potes ajoutés' : ' pote ajouté') + (CLOUD.actif ? ' pour tout le monde.' : '.') + (ok > 1 ? ' Change leurs prénoms ci-dessous.' : ' Change son prénom ci-dessous.') : '';
+  if (rates.length) msg += (msg ? ' ' : '') + (CLOUD.actif ? 'Pas envoyé (photo illisible ou pas de connexion) : ' : 'Illisible : ') + rates.join(', ') + '.';
+  if (ok && !CLOUD.actif && !IDB.db) msg += ' Ce navigateur ne garde pas les photos : elles disparaîtront en fermant la page.';
   E.depotMsg.textContent = msg;
   rendreListePotes();
   apresChangementPotes();
@@ -2434,7 +2470,7 @@ function surSaisiePote(e) {
   }
   if (k === 'cadrage') { const img = li.querySelector('.pote-photo'); if (img) img.style.objectPosition = cadrageSur(u.cadrage); }
   clearTimeout(minuteurPotes);
-  minuteurPotes = setTimeout(() => { IDB.mettre(u); apresChangementPotes(); }, 350);
+  minuteurPotes = setTimeout(() => { STOCK.mettre(u); apresChangementPotes(); }, CLOUD.actif ? 800 : 350);
 }
 async function supprimerPote(li) {
   const i = UPLOADS.findIndex(x => x.id === li.dataset.id);
@@ -2442,7 +2478,7 @@ async function supprimerPote(li) {
   const nom = UPLOADS[i].nom;
   const suivant = li.nextElementSibling || li.previousElementSibling;
   UPLOADS.splice(i, 1);
-  await IDB.suppr(li.dataset.id);
+  await STOCK.suppr(li.dataset.id);
   rendreListePotes();
   apresChangementPotes();
   E.depotMsg.textContent = nom + ' a quitté le tirage.';
@@ -2505,8 +2541,8 @@ function brancher() {
     if (Son.on) Son.confirme();
   });
   E.btnAlbum.addEventListener('click', ouvrirAlbum);
-  E.btnPotes.addEventListener('click', () => { rendreListePotes(); ouvrirDlg(E.dlgPotes); });
-  E.btnPotes2.addEventListener('click', () => { rendreListePotes(); ouvrirDlg(E.dlgPotes); });
+  E.btnPotes.addEventListener('click', () => { rendreListePotes(); ouvrirDlg(E.dlgPotes); if (CLOUD.actif) chargerPotesPartages(); });
+  E.btnPotes2.addEventListener('click', () => { rendreListePotes(); ouvrirDlg(E.dlgPotes); if (CLOUD.actif) chargerPotesPartages(); });
   E.btnFermerAlbum.addEventListener('click', () => fermerDlg(E.dlgAlbum));
   E.btnFermerPotes.addEventListener('click', () => fermerDlg(E.dlgPotes));
   E.btnFermerInspect.addEventListener('click', () => fermerDlg(E.dlgInspect));
@@ -2630,15 +2666,13 @@ function start(data) {
     const h = window.claude && window.claude.hot;
     if (h && typeof h.snapshot === 'function') h.snapshot(() => ({ booster: S.booster, rapide: S.rapide, session: S.session }));
   } catch (e) { /* rien */ }
-  IDB.ouvrir().then(async ok => {
-    if (!ok) return;
-    const liste = await IDB.tous();
-    if (Array.isArray(liste) && liste.length) {
-      liste.sort((a, b) => (a.ajoute || 0) - (b.ajoute || 0)).forEach(u => { if (u && u.id && u.photo && !UPLOADS.some(x => x.id === u.id)) UPLOADS.push(u); });
-      apresChangementPotes();
-      if (E.dlgPotes.open) rendreListePotes();
-    }
-  });
+  if (CLOUD.actif) {
+    E.noteLocale.textContent = 'Les potes ajoutés ici sont visibles par tout le monde sur le site.';
+    chargerPotesPartages();
+    setInterval(() => { if (!document.hidden && S.phase === 'idle') chargerPotesPartages(); }, 30000);
+  } else {
+    IDB.ouvrir().then(ok => { if (ok) chargerPotesPartages(); });
+  }
 }
 window.claude?.hot?.ready ? window.claude.hot.ready(start) : start(window.claude?.hot?.data ?? {});
 </script>
